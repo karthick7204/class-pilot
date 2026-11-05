@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "test": "tsx test-calc.ts",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
@@ -31,9 +31,8 @@
     "prisma": "^5.19.1",
     "puppeteer-core": "^25.16.0",
     "tough-cookie": "^4.1.4",
+    "tsx": "^4.19.1",
     "typescript": "^5.6.2"
   },
-  "devDependencies": {
-    "tsx": "^4.19.1"
-  }
+  "devDependencies": {}
 }
