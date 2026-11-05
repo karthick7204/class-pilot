@@ -1,7 +1,8 @@
 /**
  * Base API URL for backend requests.
- * In local development, defaults to '' (proxied by Vite to http://localhost:5055).
- * In production (e.g. deployed to Vercel/Render), set VITE_API_URL in your hosting dashboard.
+ * Uses relative URL ('') so requests go directly to the current origin (/api/...).
+ * Keeps all environment variables and secrets on the backend server.
  */
-export const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+export const API_BASE_URL = '';
+
 

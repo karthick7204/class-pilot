@@ -2,9 +2,16 @@
 # Exit on error
 set -o errexit
 
-# Install server dependencies and compile TypeScript
+# 1. Build React frontend client
+cd client
+npm install
+npm run build
+cd ..
+
+# 2. Build backend server and install Chrome for Puppeteer
 cd server
 npm install
 npx puppeteer browsers install chrome
 npm run build
+
 

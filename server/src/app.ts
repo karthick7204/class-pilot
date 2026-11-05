@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
 import { SrmAuthController } from './controllers/srmAuthController';
 
 const app = express();
@@ -20,5 +22,35 @@ app.post('/api/srm/parse-table', SrmAuthController.parseTable);
 app.get('/api/srm/attendance', SrmAuthController.getAttendance);
 app.get('/api/srm/marks', SrmAuthController.getInternalMarks);
 app.post('/api/calculator/simulate', SrmAuthController.simulate);
+
+// Static Client Serving (Production React SPA)
+const candidateDistPaths = [
+  path.join(__dirname, '../../client/dist'),
+  path.join(__dirname, '../client/dist'),
+  path.join(process.cwd(), '../client/dist'),
+  path.join(process.cwd(), 'client/dist'),
+  path.join(process.cwd(), 'dist'),
+];
+
+let clientDistPath: string | undefined;
+for (const p of candidateDistPaths) {
+  if (fs.existsSync(path.join(p, 'index.html'))) {
+    clientDistPath = p;
+    break;
+  }
+}
+
+if (clientDistPath) {
+  console.log(`[Express] Serving static React app from: ${clientDistPath}`);
+  app.use(express.static(clientDistPath));
+
+  // SPA fallback: Return index.html for non-API client routes like /register, /login
+  app.get('*', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath!, 'index.html'));
+  });
+}
 
 export default app;
