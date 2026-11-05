@@ -75,11 +75,10 @@ export const AttendanceBar: React.FC<AttendanceBarProps> = ({
         >
           {/* Target vertical notch line */}
           <div
-            className={`w-[2px] h-full ${
-              isAboveTarget
+            className={`w-[2px] h-full ${isAboveTarget
                 ? 'bg-emerald-400/80 shadow-[0_0_6px_rgba(52,211,153,0.8)]'
                 : 'bg-amber-400/90 shadow-[0_0_6px_rgba(251,191,36,0.8)]'
-            }`}
+              }`}
           />
         </div>
       </div>
@@ -94,11 +93,10 @@ export const AttendanceBar: React.FC<AttendanceBarProps> = ({
           style={{ left: `${target}%` }}
         >
           <span
-            className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${
-              isAboveTarget
+            className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded ${isAboveTarget
                 ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60'
                 : 'bg-amber-950/80 text-amber-400 border border-amber-800/60'
-            }`}
+              }`}
           >
             {target}% Target
           </span>
