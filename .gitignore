@@ -23,6 +23,8 @@ out/
 client/dist/
 server/dist/
 *.tsbuildinfo
+.cache/
+*/.cache/
 
 # SQLite Database & Prisma
 *.db

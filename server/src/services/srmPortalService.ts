@@ -2,6 +2,8 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import * as cheerio from 'cheerio';
 import crypto from 'crypto';
 import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import { SrmMarksService, SrmCourseMarks } from './srmMarksService';
 
 export interface SrmCourseAttendance {
@@ -67,13 +69,71 @@ const SRM_LOGIN_URL = `${SRM_BASE}/students/loginManager/youLogin.jsp`;
 const REAL_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
 
-const getChromeExecutablePath = (): string | undefined => {
+function findChromeBinaryInDir(dir: string, depth = 0): string | undefined {
+  if (depth > 6 || !fs.existsSync(dir)) return undefined;
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const found = findChromeBinaryInDir(fullPath, depth + 1);
+        if (found) return found;
+      } else if (
+        entry.name === 'chrome' ||
+        entry.name === 'chrome-headless-shell' ||
+        entry.name === 'Google Chrome for Testing' ||
+        entry.name === 'google-chrome' ||
+        entry.name === 'chromium'
+      ) {
+        return fullPath;
+      }
+    }
+  } catch {
+    // Ignore read / permissions errors
+  }
+  return undefined;
+}
+
+const getChromeExecutablePath = async (): Promise<string | undefined> => {
   // 1. Explicit environment variable (for Render, Docker, or custom setups)
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    console.log(`[Puppeteer] Using executable from PUPPETEER_EXECUTABLE_PATH: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
     return process.env.PUPPETEER_EXECUTABLE_PATH;
   }
 
-  // 2. Linux / Render production paths
+  // 2. Try Puppeteer's built-in executablePath() if it exists on disk
+  try {
+    const pptrPath = await puppeteer.executablePath();
+    if (pptrPath && fs.existsSync(pptrPath)) {
+      console.log(`[Puppeteer] Resolved executable via puppeteer.executablePath(): ${pptrPath}`);
+      return pptrPath;
+    }
+  } catch (err: any) {
+    console.warn(`[Puppeteer] puppeteer.executablePath() note: ${err?.message || err}`);
+  }
+
+  // 3. Search common cache locations (project .cache, Render cache, home .cache)
+  const candidateDirs = [
+    process.env.PUPPETEER_CACHE_DIR,
+    path.join(process.cwd(), '.cache', 'puppeteer'),
+    path.join(process.cwd(), 'server', '.cache', 'puppeteer'),
+    path.join(__dirname, '..', '..', '.cache', 'puppeteer'),
+    '/opt/render/.cache/puppeteer',
+    '/opt/render/project/.cache/puppeteer',
+    '/opt/render/project/src/.cache/puppeteer',
+    '/opt/render/project/src/server/.cache/puppeteer',
+    path.join(os.homedir(), '.cache', 'puppeteer'),
+  ].filter((d): d is string => Boolean(d && fs.existsSync(d)));
+
+  for (const dir of candidateDirs) {
+    const found = findChromeBinaryInDir(dir);
+    if (found) {
+      console.log(`[Puppeteer] Discovered Chrome executable in cache at: ${found}`);
+      return found;
+    }
+  }
+
+  // 4. Linux / Render production system paths
   if (process.platform === 'linux') {
     const linuxPaths = [
       '/usr/bin/google-chrome-stable',
@@ -83,11 +143,14 @@ const getChromeExecutablePath = (): string | undefined => {
       '/snap/bin/chromium',
     ];
     for (const p of linuxPaths) {
-      if (fs.existsSync(p)) return p;
+      if (fs.existsSync(p)) {
+        console.log(`[Puppeteer] Using Linux system Chrome: ${p}`);
+        return p;
+      }
     }
   }
 
-  // 3. Local macOS development paths
+  // 5. Local macOS development paths
   if (process.platform === 'darwin') {
     const macPaths = [
       '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -95,11 +158,14 @@ const getChromeExecutablePath = (): string | undefined => {
       '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
     ];
     for (const p of macPaths) {
-      if (fs.existsSync(p)) return p;
+      if (fs.existsSync(p)) {
+        console.log(`[Puppeteer] Using macOS local Chrome: ${p}`);
+        return p;
+      }
     }
   }
 
-  // 4. Default to undefined so Puppeteer uses its auto-downloaded bundled Chromium!
+  console.warn('[Puppeteer] No specific Chrome binary located on disk; letting Puppeteer attempt default launch.');
   return undefined;
 };
 
@@ -109,7 +175,7 @@ export class SrmPortalService {
    * loads youLogin.jsp, lets telemetry initialize, and captures the live CAPTCHA.
    */
   static async fetchCaptchaSession(): Promise<{ sessionId: string; captchaDataUrl: string }> {
-    const executablePath = getChromeExecutablePath();
+    const executablePath = await getChromeExecutablePath();
     const launchOptions: any = {
       headless: true,
       args: [
