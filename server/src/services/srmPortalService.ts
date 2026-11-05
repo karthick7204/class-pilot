@@ -1,6 +1,7 @@
-import puppeteer, { Browser, Page } from 'puppeteer-core';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import * as cheerio from 'cheerio';
 import crypto from 'crypto';
+import * as fs from 'fs';
 import { SrmMarksService, SrmCourseMarks } from './srmMarksService';
 
 export interface SrmCourseAttendance {
@@ -63,9 +64,44 @@ setInterval(async () => {
 
 const SRM_BASE = 'https://sp.srmist.edu.in/srmiststudentportal';
 const SRM_LOGIN_URL = `${SRM_BASE}/students/loginManager/youLogin.jsp`;
-const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const REAL_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
+
+const getChromeExecutablePath = (): string | undefined => {
+  // 1. Explicit environment variable (for Render, Docker, or custom setups)
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  // 2. Linux / Render production paths
+  if (process.platform === 'linux') {
+    const linuxPaths = [
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/google-chrome',
+      '/usr/bin/chromium',
+      '/usr/bin/chromium-browser',
+      '/snap/bin/chromium',
+    ];
+    for (const p of linuxPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+  }
+
+  // 3. Local macOS development paths
+  if (process.platform === 'darwin') {
+    const macPaths = [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+    ];
+    for (const p of macPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+  }
+
+  // 4. Default to undefined so Puppeteer uses its auto-downloaded bundled Chromium!
+  return undefined;
+};
 
 export class SrmPortalService {
   /**
@@ -73,8 +109,8 @@ export class SrmPortalService {
    * loads youLogin.jsp, lets telemetry initialize, and captures the live CAPTCHA.
    */
   static async fetchCaptchaSession(): Promise<{ sessionId: string; captchaDataUrl: string }> {
-    const browser = await puppeteer.launch({
-      executablePath: CHROME_PATH,
+    const executablePath = getChromeExecutablePath();
+    const launchOptions: any = {
       headless: true,
       args: [
         '--no-sandbox',
@@ -84,8 +120,17 @@ export class SrmPortalService {
         '--no-first-run',
         '--no-zygote',
         '--window-size=1280,800',
+        '--single-process',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
       ],
-    });
+    };
+
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
+    }
+
+    const browser = await puppeteer.launch(launchOptions);
 
     try {
       const page = await browser.newPage();

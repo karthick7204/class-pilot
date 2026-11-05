@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer-core';
+import { Page } from 'puppeteer';
 import * as cheerio from 'cheerio';
 import * as fs from 'fs';
 import * as path from 'path';

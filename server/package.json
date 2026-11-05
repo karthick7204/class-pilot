@@ -29,6 +29,7 @@
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^5.19.1",
+    "puppeteer": "^25.16.0",
     "puppeteer-core": "^25.16.0",
     "tough-cookie": "^4.1.4",
     "tsx": "^4.19.1",
