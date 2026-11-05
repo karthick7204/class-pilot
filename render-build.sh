@@ -7,3 +7,4 @@ cd server
 npm install
 npx puppeteer browsers install chrome
 npm run build
+

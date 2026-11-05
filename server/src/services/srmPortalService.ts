@@ -101,7 +101,22 @@ const getChromeExecutablePath = async (): Promise<string | undefined> => {
     return process.env.PUPPETEER_EXECUTABLE_PATH;
   }
 
-  // 2. Try Puppeteer's built-in executablePath() if it exists on disk
+  // 2. Local macOS development: always prioritize native installed Chrome
+  if (process.platform === 'darwin') {
+    const macPaths = [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+    ];
+    for (const p of macPaths) {
+      if (fs.existsSync(p)) {
+        console.log(`[Puppeteer] Using macOS local Chrome: ${p}`);
+        return p;
+      }
+    }
+  }
+
+  // 3. Try Puppeteer's built-in executablePath() if it exists on disk
   try {
     const pptrPath = await puppeteer.executablePath();
     if (pptrPath && fs.existsSync(pptrPath)) {
@@ -112,7 +127,7 @@ const getChromeExecutablePath = async (): Promise<string | undefined> => {
     console.warn(`[Puppeteer] puppeteer.executablePath() note: ${err?.message || err}`);
   }
 
-  // 3. Search common cache locations (project .cache, Render cache, home .cache)
+  // 4. Search common cache locations (project .cache, Render cache, home .cache)
   const candidateDirs = [
     process.env.PUPPETEER_CACHE_DIR,
     path.join(process.cwd(), '.cache', 'puppeteer'),
@@ -133,7 +148,7 @@ const getChromeExecutablePath = async (): Promise<string | undefined> => {
     }
   }
 
-  // 4. Linux / Render production system paths
+  // 5. Linux / Render production system paths
   if (process.platform === 'linux') {
     const linuxPaths = [
       '/usr/bin/google-chrome-stable',
@@ -145,21 +160,6 @@ const getChromeExecutablePath = async (): Promise<string | undefined> => {
     for (const p of linuxPaths) {
       if (fs.existsSync(p)) {
         console.log(`[Puppeteer] Using Linux system Chrome: ${p}`);
-        return p;
-      }
-    }
-  }
-
-  // 5. Local macOS development paths
-  if (process.platform === 'darwin') {
-    const macPaths = [
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      '/Applications/Chromium.app/Contents/MacOS/Chromium',
-      '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-    ];
-    for (const p of macPaths) {
-      if (fs.existsSync(p)) {
-        console.log(`[Puppeteer] Using macOS local Chrome: ${p}`);
         return p;
       }
     }
@@ -186,9 +186,10 @@ export class SrmPortalService {
         '--no-first-run',
         '--no-zygote',
         '--window-size=1280,800',
-        '--single-process',
         '--disable-gpu',
         '--disable-software-rasterizer',
+        '--mute-audio',
+        '--no-default-browser-check',
       ],
     };
 
@@ -305,6 +306,15 @@ export class SrmPortalService {
       await new Promise((r) => setTimeout(r, 500));
       await page.mouse.move(450, 480);
 
+      // Listen for portal alert dialogs (e.g. invalid captcha, invalid credentials)
+      let dialogText = '';
+      const onDialog = async (dialog: any) => {
+        dialogText = dialog.message();
+        console.log(`[SRM Portal Dialog] ${dialog.type()}: ${dialogText}`);
+        await dialog.dismiss().catch(() => {});
+      };
+      page.on('dialog', onDialog);
+
       // Click submit and wait for navigation
       await Promise.all([
         page.click('#btnLogin'),
@@ -312,6 +322,22 @@ export class SrmPortalService {
       ]);
 
       await new Promise((r) => setTimeout(r, 1200));
+      page.off('dialog', onDialog);
+
+      // Check if alert dialog occurred
+      if (dialogText) {
+        if (dialogText.toLowerCase().includes('captcha')) {
+          throw new Error('Invalid CAPTCHA entered. Please enter the characters shown in the image.');
+        }
+        if (
+          dialogText.toLowerCase().includes('password') ||
+          dialogText.toLowerCase().includes('user') ||
+          dialogText.toLowerCase().includes('credential')
+        ) {
+          throw new Error('Invalid SRM credentials. Please check your NetID and password.');
+        }
+        throw new Error(dialogText);
+      }
 
       // Check current page content and URL
       const currentUrl = page.url();
@@ -334,6 +360,7 @@ export class SrmPortalService {
         if (alertText) {
           throw new Error(alertText);
         }
+        throw new Error('SRM Portal authentication did not succeed. Please verify your credentials and CAPTCHA.');
       }
 
       // Collect landing page content and frame contents
@@ -344,41 +371,30 @@ export class SrmPortalService {
         } catch (e) {}
       }
 
-      // Open a second tab in the authenticated browser session for parallel extraction
-      const marksPage = await browser.newPage();
-      await marksPage.setUserAgent(REAL_USER_AGENT);
-      await marksPage.setViewport({ width: 1280, height: 800 });
-
-      // Parallel extraction using real Chrome:
-      // Tab 1 (page): loads attendance details report (~1.2s)
-      // Tab 2 (marksPage): loads internal mark details report (~1.2s)
-      const attendancePromise = (async () => {
-        try {
-          await page.goto(`${SRM_BASE}/students/report/studentAttendanceDetails.jsp`, {
-            waitUntil: 'domcontentloaded',
-            timeout: 12000,
-          });
-          const content = await page.content();
-          allContents.push(content);
-          for (const f of page.frames()) {
-            try {
-              allContents.push(await f.content());
-            } catch (e) {}
-          }
-        } catch (e) {
-          console.warn('[SrmPortalService] Attendance navigation error:', e);
+      // Sequential extraction using the same authenticated browser tab
+      // to avoid opening multiple tabs and exceeding memory limits on production Linux / Render (512MB RAM)
+      try {
+        await page.goto(`${SRM_BASE}/students/report/studentAttendanceDetails.jsp`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 15000,
+        });
+        const content = await page.content();
+        allContents.push(content);
+        for (const f of page.frames()) {
+          try {
+            allContents.push(await f.content());
+          } catch (e) {}
         }
-      })();
+      } catch (e) {
+        console.warn('[SrmPortalService] Attendance navigation error:', e);
+      }
 
-      const marksPromise = SrmMarksService.scrapeInternalMarks(marksPage, page, cleanNetId).catch((err) => {
+      let marksList: SrmCourseMarks[] = [];
+      try {
+        marksList = await SrmMarksService.scrapeInternalMarks(page, undefined, cleanNetId);
+      } catch (err) {
         console.warn('[SrmPortalService] Marks scraping warning:', err);
-        return [] as SrmCourseMarks[];
-      });
-
-      const [, marksList] = await Promise.all([
-        attendancePromise,
-        marksPromise,
-      ]);
+      }
 
       // Close browser promptly after extraction
       try {
