@@ -1,0 +1,67 @@
+# Dependencies
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.env
+*.env.local
+server/.env
+client/.env
+
+# Production & Build Outputs
+dist/
+build/
+out/
+client/dist/
+server/dist/
+*.tsbuildinfo
+
+# SQLite Database & Prisma
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/*.db
+prisma/*.db-journal
+
+# Logs & Diagnostics Dumps
+*.log
+logs/
+*.dump.html
+*dump*.html
+scratch/
+*/scratch/
+.system_generated/
+
+# OS Specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor Directories
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+test-results/
