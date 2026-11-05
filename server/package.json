@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "puppeteer browsers install chrome || true",
     "dev": "tsx watch src/index.ts",
-    "build": "npx puppeteer browsers install chrome && (cd ../client && npm install && npm run build || true) && prisma generate && tsc",
+    "build": "npx puppeteer browsers install chrome && prisma generate && tsc",
     "test": "tsx test-calc.ts",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
