@@ -1,13 +1,37 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import * as fs from 'fs';
+import * as path from 'path';
 import { SrmPortalService, SrmAttendanceData } from '../services/srmPortalService';
 import { TableParserService } from '../services/tableParserService';
 import { simulateAttendance, calculateAttendanceMetrics } from '../services/calculationEngine';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'srm_smart_attendance_tracker_secret_2024';
 
-// In-memory cache of current student's real attendance
-const studentDataCache = new Map<string, SrmAttendanceData>();
+const CACHE_DIR = path.join(process.cwd(), 'scratch');
+const CACHE_FILE = path.join(CACHE_DIR, 'student_session_cache.json');
+
+const loadDiskCache = (): Map<string, SrmAttendanceData> => {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const raw = fs.readFileSync(CACHE_FILE, 'utf8');
+      const obj = JSON.parse(raw);
+      return new Map(Object.entries(obj));
+    }
+  } catch (e) {}
+  return new Map();
+};
+
+const saveDiskCache = (map: Map<string, SrmAttendanceData>) => {
+  try {
+    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+    const obj = Object.fromEntries(map.entries());
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(obj), 'utf8');
+  } catch (e) {}
+};
+
+// Persistent cache of student attendance data
+const studentDataCache = loadDiskCache();
 
 export class SrmAuthController {
   /**
@@ -51,6 +75,7 @@ export class SrmAuthController {
 
       const netIdClean = username.trim().toLowerCase().replace(/@.*$/, '');
       studentDataCache.set(netIdClean, attendanceData);
+      saveDiskCache(studentDataCache);
 
       // Create authenticated JWT session for student
       const token = jwt.sign(
@@ -92,7 +117,7 @@ export class SrmAuthController {
 
       const data = studentDataCache.get(decoded.netId);
       if (!data) {
-        res.status(404).json({ error: 'Attendance session expired. Please re-login.' });
+        res.status(401).json({ error: 'Attendance session expired. Please re-login.' });
         return;
       }
 
@@ -118,7 +143,7 @@ export class SrmAuthController {
 
       const data = studentDataCache.get(decoded.netId);
       if (!data) {
-        res.status(404).json({ error: 'Session expired. Please re-login.' });
+        res.status(401).json({ error: 'Session expired. Please re-login.' });
         return;
       }
 
@@ -186,6 +211,7 @@ export class SrmAuthController {
       };
 
       studentDataCache.set(cleanNetId, data);
+      saveDiskCache(studentDataCache);
 
       const token = jwt.sign({ netId: cleanNetId, name: cleanNetId.toUpperCase() }, JWT_SECRET, {
         expiresIn: '24h',

@@ -3,6 +3,12 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { SrmAuthController } from './controllers/srmAuthController';
+import authRoutes from './routes/authRoutes';
+import subjectRoutes from './routes/subjectRoutes';
+import attendanceRoutes from './routes/attendanceRoutes';
+import portalRoutes from './routes/portalRoutes';
+import userRoutes from './routes/userRoutes';
+import calculatorRoutes from './routes/calculatorRoutes';
 
 const app = express();
 
@@ -22,6 +28,14 @@ app.post('/api/srm/parse-table', SrmAuthController.parseTable);
 app.get('/api/srm/attendance', SrmAuthController.getAttendance);
 app.get('/api/srm/marks', SrmAuthController.getInternalMarks);
 app.post('/api/calculator/simulate', SrmAuthController.simulate);
+
+// Core Application API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/subjects', subjectRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/portal', portalRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/calculator', calculatorRoutes);
 
 // Static Client Serving (Production React SPA)
 const candidateDistPaths = [
