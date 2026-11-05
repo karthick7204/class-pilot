@@ -3,9 +3,9 @@ dotenv.config();
 
 import app from './app';
 
-const PORT = process.env.PORT || 5055;
+const PORT = Number(process.env.PORT) || 5055;
 
-app.listen(PORT, () => {
-  console.log(`🚀 AttendWise Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 AttendWise Server running on http://0.0.0.0:${PORT}`);
 });
 
