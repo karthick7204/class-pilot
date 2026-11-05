@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, User, RefreshCw, AlertCircle, ShieldCheck, ArrowRight } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 
 interface LoginPageProps {
   onLoginSuccess: (token: string, studentData: any) => void;
@@ -30,7 +31,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setLoadingCaptcha(true);
     setErrorMsg('');
     try {
-      const res = await axios.get('/api/srm/captcha');
+      const res = await axios.get(`${API_BASE_URL}/api/srm/captcha`);
       setSessionId(res.data.sessionId);
       setCaptchaDataUrl(res.data.captchaDataUrl);
       setCaptchaInput('');
@@ -56,7 +57,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setErrorMsg('');
 
     try {
-      const res = await axios.post('/api/srm/login', {
+      const res = await axios.post(`${API_BASE_URL}/api/srm/login`, {
         sessionId,
         username: username.trim(),
         password,
@@ -85,7 +86,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setErrorMsg('');
 
     try {
-      const res = await axios.post('/api/srm/parse-table', {
+      const res = await axios.post(`${API_BASE_URL}/api/srm/parse-table`, {
         rawContent: pastedContent,
         netId: username.trim() || 'STUDENT',
       });

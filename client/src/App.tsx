@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import axios from 'axios';
+import { API_BASE_URL } from './config/api';
 
 export const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(() => {
@@ -22,7 +23,7 @@ export const App: React.FC = () => {
       if (!storedToken) return;
 
       try {
-        const res = await axios.get('/api/srm/attendance', {
+        const res = await axios.get(`${API_BASE_URL}/api/srm/attendance`, {
           headers: { Authorization: `Bearer ${storedToken}` },
         });
         if (res.data.data) {
