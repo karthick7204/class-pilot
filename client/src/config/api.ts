@@ -1,8 +1,9 @@
 /**
  * Base API URL for backend requests.
- * Uses relative URL ('') so requests go directly to the current origin (/api/...).
- * Keeps all environment variables and secrets on the backend server.
+ * Configured via .env / .env.local in Next.js (NEXT_PUBLIC_API_URL).
+ * In production or cross-domain, set NEXT_PUBLIC_API_URL in .env.local
  */
-export const API_BASE_URL = '';
+export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
+
 
 

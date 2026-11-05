@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Lock, User, RefreshCw, AlertCircle, ShieldCheck, ArrowRight } from 'lucide-react';
 import axios from 'axios';

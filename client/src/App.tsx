@@ -1,6 +1,8 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
+import { LoginPage } from './views/LoginPage';
+import { DashboardPage } from './views/DashboardPage';
 import axios from 'axios';
 import { API_BASE_URL } from './config/api';
 
