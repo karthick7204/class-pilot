@@ -1,5 +1,5 @@
 datasource db {
-  provider = "sqlite"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
@@ -8,7 +8,7 @@ generator client {
 }
 
 model User {
-  id               String          @id @default(uuid())
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
   studentId        String          @unique
   name             String
   email            String          @unique
@@ -24,8 +24,8 @@ model User {
 }
 
 model Subject {
-  id              String          @id @default(uuid())
-  userId          String
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String          @db.ObjectId
   subjectCode     String?
   subjectName     String
   teacherName     String?
@@ -42,9 +42,9 @@ model Subject {
 }
 
 model AttendanceLog {
-  id        String   @id @default(uuid())
-  userId    String
-  subjectId String
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  subjectId String   @db.ObjectId
   date      DateTime @default(now())
   status    String   // "PRESENT" | "ABSENT" | "CANCELLED"
   notes     String?
@@ -55,4 +55,3 @@ model AttendanceLog {
   @@index([userId, subjectId])
   @@index([date])
 }
-
