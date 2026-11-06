@@ -6,7 +6,7 @@ import { SrmPortalService, SrmAttendanceData } from '../services/srmPortalServic
 import { TableParserService } from '../services/tableParserService';
 import { simulateAttendance, calculateAttendanceMetrics } from '../services/calculationEngine';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'srm_smart_attendance_tracker_secret_2024';
+const JWT_SECRET = process.env.JWT_SECRET || 'attendwise_super_secure_jwt_secret_key_987654321';
 
 const CACHE_DIR = path.join(process.cwd(), 'scratch');
 const CACHE_FILE = path.join(CACHE_DIR, 'student_session_cache.json');
