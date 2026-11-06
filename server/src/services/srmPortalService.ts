@@ -302,6 +302,37 @@ export class SrmPortalService {
         }
       });
 
+      // Verify the form fields were actually filled (typing can silently drop keys in slow headless envs)
+      const filled = await page.evaluate(() => {
+        const doc = (globalThis as any).document;
+        const val = (sel: string) => (doc?.querySelector(sel)?.value ?? '') as string;
+        return { u: val('#username'), pLen: val('#password').length, c: val('#captcha') };
+      });
+      if (filled.u !== cleanNetId || filled.pLen !== password.length || filled.c !== cleanCaptcha) {
+        console.warn(
+          `[SRM Login] Field mismatch after typing (usernameOk=${filled.u === cleanNetId}, ` +
+            `passwordLenOk=${filled.pLen === password.length}, captchaOk=${filled.c === cleanCaptcha}). Re-filling.`
+        );
+        await page.evaluate(
+          (u: string, p: string, c: string) => {
+            const doc = (globalThis as any).document;
+            const set = (sel: string, v: string) => {
+              const el = doc?.querySelector(sel);
+              if (!el) return;
+              el.value = v;
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            set('#username', u);
+            set('#password', p);
+            set('#captcha', c);
+          },
+          cleanNetId,
+          password,
+          cleanCaptcha
+        );
+      }
+
       // Natural pause before submit so client-side encryption tokens finalize
       await new Promise((r) => setTimeout(r, 500));
       await page.mouse.move(450, 480);
@@ -346,10 +377,37 @@ export class SrmPortalService {
 
       // Check if still on login page with an alert
       if (currentUrl.includes('youLogin.jsp') || currentUrl.includes('LoginServlet')) {
-        const alertText = $page('.alert-danger, .alert-icon-content, .alert, #divUserId')
-          .text()
-          .replace(/\s+/g, ' ')
-          .trim();
+        // Only read messages that are actually VISIBLE to the user — the login page
+        // contains hidden alert templates (e.g. "Invalid credentials") that must be ignored.
+        const alertText: string = await page
+          .evaluate(() => {
+            const doc = (globalThis as any).document;
+            const win = globalThis as any;
+            if (!doc) return '';
+            const nodes = Array.from(
+              doc.querySelectorAll('.alert-danger, .alert-icon-content, .alert, #divUserId')
+            ) as any[];
+            return nodes
+              .filter((el) => {
+                const s = win.getComputedStyle(el);
+                return (
+                  s.display !== 'none' &&
+                  s.visibility !== 'hidden' &&
+                  el.offsetParent !== null &&
+                  (el.innerText || '').trim().length > 0
+                );
+              })
+              .map((el) => el.innerText)
+              .join(' ');
+          })
+          .then((t: string) => t.replace(/\s+/g, ' ').trim())
+          .catch(() => '');
+
+        const pageTitle = await page.title().catch(() => '');
+        console.warn(
+          `[SRM Login] Still on login page. url=${currentUrl} title="${pageTitle}" ` +
+            `visibleAlert="${alertText}" htmlLen=${pageHtml.length}`
+        );
 
         if (alertText.includes('Invalid credentials') || alertText.includes('Invalid User')) {
           throw new Error('Invalid SRM credentials. Please check your NetID and password.');
