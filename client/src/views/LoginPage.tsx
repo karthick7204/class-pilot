@@ -40,8 +40,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     } catch (err: any) {
       console.error('Failed to load CAPTCHA:', err);
       const serverMsg = err.response?.data?.error;
+      const isLocal = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
       const networkMsg = !err.response
-        ? `Cannot connect to backend server at ${API_BASE_URL}. Please ensure the backend server is running on port 3002.`
+        ? (isLocal
+          ? `Cannot connect to backend server at ${API_BASE_URL}. Please ensure the backend server is running on port 3002.`
+          : `Backend server is waking up or temporarily unreachable. Free Render instances sleep when idle—please click Refresh in a few seconds.`)
         : 'Failed to connect to SRMIST Student Portal. Click refresh to retry.';
       setErrorMsg(serverMsg || networkMsg);
     } finally {
@@ -107,15 +110,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       <div className="w-full max-w-md">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 shadow-xl shadow-blue-500/30 mb-4 border border-blue-400/30">
-            <span className="font-black text-2xl tracking-tighter text-white">SRM</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-            SRM Smart Attendance Tracker
-          </h1>
-          <p className="text-xs text-blue-200/70 mt-1.5">
-            Log in with your official SRM student portal credentials to extract live attendance & calculate margins.
-          </p>
+
+
         </div>
 
         {/* Login Box */}
@@ -128,11 +124,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 setActiveTab('login');
                 setErrorMsg('');
               }}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-                activeTab === 'login'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200 bg-slate-800/40'
-              }`}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === 'login'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200 bg-slate-800/40'
+                }`}
             >
               Direct SRM Login
             </button>
@@ -142,11 +137,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 setActiveTab('paste');
                 setErrorMsg('');
               }}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-                activeTab === 'paste'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200 bg-slate-800/40'
-              }`}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${activeTab === 'paste'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200 bg-slate-800/40'
+                }`}
             >
               Paste Portal Table (Instant)
             </button>
@@ -161,116 +155,116 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
           {activeTab === 'login' ? (
             <form onSubmit={handleLogin} className="space-y-4">
-            {/* NetID */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                NetID <span className="text-slate-500 font-normal">(without '@srmist.edu.in')</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. ab1234 or your student NetID"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono"
-                  required
-                />
-                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                Portal Password
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  required
-                />
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-              </div>
-            </div>
-
-            {/* Live Captcha Section */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-slate-300">
-                  SRM Portal Captcha
+              {/* NetID */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  NetID <span className="text-slate-500 font-normal">(without '@srmist.edu.in')</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={fetchFreshCaptcha}
-                  disabled={loadingCaptcha}
-                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold transition-colors"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingCaptcha ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  value={captchaInput}
-                  onChange={(e) => setCaptchaInput(e.target.value)}
-                  placeholder="Enter letters"
-                  maxLength={8}
-                  className="w-1/2 px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono tracking-widest text-center"
-                  required
-                />
-
-                <div className="flex-1 h-12 bg-white rounded-xl border border-slate-700 flex items-center justify-center overflow-hidden p-1 shadow-inner">
-                  {loadingCaptcha ? (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                      Loading...
-                    </div>
-                  ) : captchaDataUrl ? (
-                    <img
-                      src={captchaDataUrl}
-                      alt="SRM Portal Live Captcha"
-                      className="h-full w-auto object-contain select-none"
-                    />
-                  ) : (
-                    <span className="text-xs text-slate-500">Failed to load</span>
-                  )}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="e.g. ab1234 or your student NetID"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono"
+                    required
+                  />
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                 </div>
               </div>
-            </div>
 
-            {/* Security Guarantee */}
-            <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
-              <span>
-                Passwords are authenticated directly with <strong>sp.srmist.edu.in</strong> in memory. We never store portal passwords.
-              </span>
-            </div>
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                  Portal Password
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    required
+                  />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                </div>
+              </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={submitting || loadingCaptcha}
-              className="w-full mt-3 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-            >
-              {submitting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Connecting to SRM & Fetching Real Attendance...
-                </>
-              ) : (
-                <>
-                  Log In & Fetch Live Attendance
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
+              {/* Live Captcha Section */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-300">
+                    SRM Portal Captcha
+                  </label>
+                  <button
+                    type="button"
+                    onClick={fetchFreshCaptcha}
+                    disabled={loadingCaptcha}
+                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold transition-colors"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingCaptcha ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={captchaInput}
+                    onChange={(e) => setCaptchaInput(e.target.value)}
+                    placeholder="Enter letters"
+                    maxLength={8}
+                    className="w-1/2 px-3.5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono tracking-widest text-center"
+                    required
+                  />
+
+                  <div className="flex-1 h-12 bg-white rounded-xl border border-slate-700 flex items-center justify-center overflow-hidden p-1 shadow-inner">
+                    {loadingCaptcha ? (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                        Loading...
+                      </div>
+                    ) : captchaDataUrl ? (
+                      <img
+                        src={captchaDataUrl}
+                        alt="SRM Portal Live Captcha"
+                        className="h-full w-auto object-contain select-none"
+                      />
+                    ) : (
+                      <span className="text-xs text-slate-500">Failed to load</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Security Guarantee */}
+              <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                <span>
+                  Passwords are authenticated directly with <strong>sp.srmist.edu.in</strong> in memory. We never store portal passwords.
+                </span>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={submitting || loadingCaptcha}
+                className="w-full mt-3 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Connecting to SRM & Fetching Real Attendance...
+                  </>
+                ) : (
+                  <>
+                    Log In & Fetch Live Attendance
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
           ) : (
             <form onSubmit={handlePasteSubmit} className="space-y-4">
               <div>
