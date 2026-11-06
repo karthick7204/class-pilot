@@ -39,10 +39,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       setCaptchaInput('');
     } catch (err: any) {
       console.error('Failed to load CAPTCHA:', err);
-      setErrorMsg(
-        err.response?.data?.error ||
-          'Failed to connect to SRMIST Student Portal. Click refresh to retry.'
-      );
+      const serverMsg = err.response?.data?.error;
+      const networkMsg = !err.response
+        ? `Cannot connect to backend server at ${API_BASE_URL}. Please ensure the backend server is running on port 3002.`
+        : 'Failed to connect to SRMIST Student Portal. Click refresh to retry.';
+      setErrorMsg(serverMsg || networkMsg);
     } finally {
       setLoadingCaptcha(false);
     }

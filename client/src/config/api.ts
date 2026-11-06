@@ -1,9 +1,10 @@
 /**
  * Base API URL for backend requests.
- * Configured via .env / .env.local in Next.js (NEXT_PUBLIC_API_URL).
- * In production or cross-domain, set NEXT_PUBLIC_API_URL in .env.local
+ * Takes the URL from process.env.NEXT_PUBLIC_API_URL with a default fallback.
  */
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/+$/, '');
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002').replace(/\/+$/, '');
+export const API_BASE_URL = API_URL;
+
 
 
 
